@@ -43,7 +43,8 @@ class Sprite(pygame.sprite.Sprite):
         self.skin = get_image(self.skins[self.skin_i])
         rotated = pygame.transform.rotate(self.skin, self.direction)
         rect = rotated.get_rect()
-        gameDisplay.blit(rotated, (self.x - rect.center[0], self.y - rect.center[1]))
+        gameDisplay.blit(rotated, (self.x - stage.vp.x - rect.center[0], self.y - stage.vp.y - rect.center[1]))
+        # gameDisplay.blit(rotated, (self.x - rect.center[0], self.y - rect.center[1]))
 
 
 class Player(Sprite):

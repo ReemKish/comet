@@ -113,25 +113,17 @@ class Stage:
         return sprite
 
     def do(self):
-        """Goes over all sprites in all layers and updates their x and y coordinates so they appear
-           in a correct position on the screen relative to the viewport's position,
-           then draws the sprites by the order of the layers.
+        """Goes over all sprites in all layers. For each sprite checks if its position is visible on the viewport,
+        if it is, the sprite is drawn (without updating the display).
+        the drawing are done in the order of layers.
+        Also centralizes the viewport on the focused sprite.
         """
 
         for layer in self.layers:
             for sprite in layer:
-                # if self.focus == sprite: continue
-                x = sprite.x - self.vp.x
-                y = sprite.y - self.vp.y
-                # x = sprite.x
-                # y = sprite.y
-                sprite.update(x, y)
+                sprite.update(sprite.x, sprite.y)
                 if self.vp.checkObjectVisible(sprite):
                     sprite.draw()
 
         if self.focus:
-            # x = self.vp.w // 2
-            # y = self.vp.h // 2
-            # self.focus.update(x, y)
-            # self.focus.draw()
             self.vp.centerOnXY(self.focus.x, self.focus.y)
