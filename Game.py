@@ -168,9 +168,9 @@ def gameLoop():
     while True:
         HandleEvents()
         gameDisplay.fill(space)
-        # x = round(player.x/1920) * 1920
-        # y = round(player.x/1080) * 1080
-
+        x = round(player.x/1920) * 1920
+        y = round(player.y/1080) * 1080
+        
 
         x -= stage.vp.x
         y -= stage.vp.y
@@ -180,10 +180,11 @@ def gameLoop():
         gameDisplay.blit(bg, (x-1920, y-1080))
 
         stage.do()
-        # Display FPS
-        fps = int(clock.get_fps())
-        gameDisplay.blit(font.render(str(fps), True, pygame.Color('orange')),(0,0))
-        gameDisplay.blit(font.render(str(round(stage.focus.x))+" , "+str(round(stage.focus.y)), True, pygame.Color('white')),(0,30))
+        # Display FPS and the focused sprite's coordinates
+        fps = clock.get_fps()
+        gameDisplay.blit(font.render("%.1f"%fps, True, pygame.Color('orange')),(0,0))
+        gameDisplay.blit(font.render("%.2f, %.2f"%(stage.focus.x,stage.focus.y), True, pygame.Color('white')),(0,30))
+        gameDisplay.blit(font.render("%.2f, %.2f"%(x+stage.vp.x,y+stage.vp.y), True, pygame.Color('white')),(0,60))
         # Cap FPS
         clock.tick(FPS)
         current_frame = (current_frame + 1) % 30
