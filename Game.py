@@ -16,6 +16,8 @@ from get_image import get_image
 class Sprite(pygame.sprite.Sprite):
     """Base class for all sprites in the game.
     """
+    
+    sprites = []
 
     def __init__(self, skins, animation_fps, x, y):
         """Initialization.
@@ -28,7 +30,7 @@ class Sprite(pygame.sprite.Sprite):
         """
 
         pygame.sprite.Sprite.__init__(self)
-
+        self.sprites.append(self)
         self.skins = skins
         self.skin = get_image(skins[0])  # Current sprite's skin
         self.skin_i = 0  # Index of the current sprite's skin in self.skins
@@ -51,6 +53,8 @@ class Sprite(pygame.sprite.Sprite):
 class Player(Sprite):
     """A player object is a player shown on screen and is controlled by the user.
     """
+    
+    players = []
 
     def __init__(self, skins, animation_fps=8, x=0, y=0,
                  speed_factor=1.2, keys=(pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_SPACE)):
@@ -65,11 +69,12 @@ class Player(Sprite):
             y {int|float} -- sprite's y-coordinate (default: {0})
             speed_factor {int|float} -- the higher the speed factor, the faster the player moves (default: {1.2})
             keys {tuple} -- A tuple that contains the keys that update the player's actions in the following order:
-                     ([Thrust], [TurnLeft], [TurnRight], [Shoot]) 
+                     ([Thrust], [TurnLeft], [TurnRight], [Reverse], [Shoot]) 
                      (default: {(pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_SPACE)})
         """
 
         Sprite.__init__(self, skins, animation_fps, x, y)
+        self.players.append(self)
         self.speed = 0
         self.speed_factor = speed_factor
         self.keys = keys
@@ -84,11 +89,14 @@ class Player(Sprite):
 
     def update(self, x, y):
         self.iter_image()
-        keys_states = pygame.key.get_pressed()
-        for key, state in enumerate(keys_states):
-            if state and (key in self.keys):
-                self.controls[key]()
-        if not keys_states[self.keys[0]] and not keys_states[self.keys[2]] and self.speed != 0:
+        for key in self.keys:
+            if keysStates[key]: self.controls[key]()
+
+        # Space gravity "slide" effect:
+        # Testing if Thrust key isn't pressed, Reverse key isn't pressed and the player still moves ("slides"):
+        if not keysStates[self.keys[0]] \
+           and not keysStates[self.keys[2]] \
+           and self.speed != 0:
             self.Pull()
         self.Move(x, y)
 
@@ -97,7 +105,7 @@ class Player(Sprite):
             if 1 <= self.skin_i <= 5:
                 self.skin_i = self.skin_i % 5 + 1
             elif 6 <= self.skin_i <= 9:
-                self.skin_i = (self.skin_i + 1) % 9
+                self.skin_i = (self.skin_i + 1) % 10
 
     def handle_key_event(self, event, key):
         action = self.controls[key]
@@ -133,7 +141,7 @@ class Player(Sprite):
             self.velocity += 0.5
 
     def TurnLeft(self):
-        self.direction += 3 + self.speed / 14.0
+        self.direction += 4 - self.speed / 4
         self.direction %= 360
 
     def Reverse(self):
@@ -141,7 +149,7 @@ class Player(Sprite):
             self.velocity -= 0.5
 
     def TurnRight(self):
-        self.direction -= 3 + self.speed / 14.0
+        self.direction -= 4 - self.speed / 4
         self.direction %= 360
 
     def Shoot(self):
@@ -159,31 +167,49 @@ def HandleEvents():
             pygame.quit()
             sys.exit()
         elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_q:
+            if event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 sys.exit()
-            elif event.key == player.keys[0]:
-                player.Ignite()
             elif event.key == pygame.K_SPACE:
                 stage.setFocus(player2 if stage.focus == player else player)
+            elif (event.key, True) in keyDict:
+                keyDict[(event.key, True)]()
+            # elif event.key == player.keys[0]:
+            #     player.Ignite()
+            #     pass
         elif event.type == pygame.KEYUP:
-            if event.key == player.keys[0]:
-                player.Extinguish()
+            if (event.key, False) in keyDict:
+                keyDict[(event.key, False)]()
+                print("ok")
+
+def ConstructKeysDict():
+    """Construct a dictionary that maps each tuple (key, state) to a player function
+       key is the key pressed (pygame constant). state is either True or False (key down or key up)
+    """
+    keyDict = {}
+    for _player in Player.players:
+            keyDict[(_player.keys[0], True)] = _player.Ignite
+            keyDict[(_player.keys[0], False)] = _player.Extinguish
+    return keyDict
+
 
 
 # ---------------------------------------------------- Game Loop ----------------------------------------------------- #
 def gameLoop():
     global player
     global current_frame
+    global keysStates
     while True:
+
         HandleEvents()
+        keysStates = pygame.key.get_pressed()
         stage.do()
+        
         # Display FPS and the focused sprite's coordinates
         fps = clock.get_fps()
-        gameDisplay.blit(font.render("%.1f" % fps, True,
-                                     pygame.Color('orange')), (0, 0))
-        gameDisplay.blit(font.render("%.2f, %.2f" % (
-            stage.focus.x, stage.focus.y), True, pygame.Color('white')), (0, 30))
+        gameDisplay.blit(font.render("%.1f" % fps, True, pygame.Color('orange')), (0, 0))
+        if stage.focus: gameDisplay.blit(font.render("%.2f, %.2f" % (stage.focus.x, stage.focus.y), True, pygame.Color('white')), (0, 30))
+        
         # Cap FPS
         clock.tick(FPS)
         current_frame = (current_frame + 1) % 30
@@ -193,13 +219,13 @@ def gameLoop():
 # ------------------------------------------------------- Main ------------------------------------------------------- #
 def main():
     global FPS
-    global white, black, red, green, blue, space  # Colors
     global gameDisplay
     global clock
     global stage
     global player, player2
     global current_frame
     global font
+    global keyDict
 
     # Framerate variables:
     FPS = 60
@@ -212,19 +238,21 @@ def main():
     # gameDisplay = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF)  # Run fullscreen
     gameDisplay = pygame.display.set_mode((0, 0), pygame.NOFRAME)  # Run borderless windowed
     pygame.mouse.set_visible(False)
-    pygame.display.set_caption('GunGame')
+    pygame.display.set_caption('Comet')
     font = pygame.font.Font(None, 30)
 
     # Initialize the stage and add sprites:
     stage = Stage(2)  # 2 layers
     player = stage.addSprite(Player(sprites.spaceship1, x=500, y=500))
-    player2 = stage.addSprite(Player(sprites.spaceship2, 8, y=64, keys=(pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT, pygame.K_SPACE)))
-    stage.setFocus(player)
+    player2 = stage.addSprite(Player(sprites.spaceship1, x=500, y=500, keys=(pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT, pygame.K_SPACE)))
+    for _ in range(0): stage.addSprite(Player(sprites.spaceship1, keys=(0,)*5))
+    keyDict = ConstructKeysDict()
+    # stage.setFocus(player)
     stage.setBackground([["textures\\background\\debug00.png","textures\\background\\debug10.png","textures\\background\\debug20.png"],
                          ["textures\\background\\debug01.png","textures\\background\\debug11.png","textures\\background\\debug21.png"],
                          ["textures\\background\\debug02.png","textures\\background\\debug12.png","textures\\background\\debug22.png"]])
-
     # End of initialization
+    print(keyDict)
     gameLoop()
 
 

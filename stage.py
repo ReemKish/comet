@@ -198,7 +198,7 @@ class Stage:
         if self.focus:
             self.drawBackground(self.focus.x, self.focus.y)
         else:
-            self.drawBackground(self.vp.x, self.vp,y)
+            self.drawBackground(self.vp.x, self.vp.y)
 
         for layer in self.layers:
             for sprite in layer:
