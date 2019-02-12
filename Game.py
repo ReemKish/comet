@@ -180,7 +180,6 @@ def HandleEvents():
         elif event.type == pygame.KEYUP:
             if (event.key, False) in keyDict:
                 keyDict[(event.key, False)]()
-                print("ok")
 
 def ConstructKeysDict():
     """Construct a dictionary that maps each tuple (key, state) to a player function
