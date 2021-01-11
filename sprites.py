@@ -7,6 +7,14 @@ def construct(namespace, index_list):
 # ------------------------------------------------------ Sprites -------------------------------------------------------
 spaceship1 = construct('spaceship1', list(range(10)))
 spaceship2 = construct('spaceship2', list(range(10)))
-missile2 = construct('missile2', [0,1,2])
-missile1 = construct('missile1', [0,1,2])
+missile2 = construct('missile2', [0, 1, 2])
+missile1 = construct('missile1', [0, 1, 2])
 bg = construct('background', [0])
+
+
+# TODO
+# clean code first, add features later
+# documentation
+# naming conventions
+# no globals
+#

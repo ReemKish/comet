@@ -16,12 +16,12 @@ from get_image import get_image
 class Sprite(pygame.sprite.Sprite):
     """Base class for all sprites in the game.
     """
-    
+
     sprites = []
 
     def __init__(self, skins, animation_fps, x, y):
         """Initialization.
-        
+
         Arguments:
             skins {list} -- the list of the sprite's skins - taken from 'sprites.py' module
             animation_fps {int} -- pace (in frames per second) of the  player's skin animation
@@ -51,18 +51,19 @@ class Sprite(pygame.sprite.Sprite):
 
 
 class Player(Sprite):
+    global missiles
     """A player object is a player shown on screen and is controlled by the user.
     """
-    
+
     players = []
 
     def __init__(self, skins, animation_fps=8, x=0, y=0,
-                 speed_factor=1.2, keys=(pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_SPACE)):
+                 speed_factor=1.01, keys=(pygame.K_w, pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_SPACE)):
         """Initialization.
-        
+
         Arguments:
             skins {list} -- The list of the sprite's skins - taken from 'sprites.py' module
-        
+
         Keyword Arguments:
             animation_fps {int} -- Pace (in frames per second) of the  player's skin animation (default: {8})
             x {int|float} -- sprites's x-coordinate (default: {0})
@@ -101,6 +102,7 @@ class Player(Sprite):
         self.Move(x, y)
 
     def iter_image(self):
+        print(f'{current_frame} % {FPS}//{self.animation_fps}')
         if current_frame % (FPS // self.animation_fps) == 0:
             if 1 <= self.skin_i <= 5:
                 self.skin_i = self.skin_i % 5 + 1
@@ -115,7 +117,7 @@ class Player(Sprite):
             action()
 
     def Move(self, x, y):
-        self.speed = 2 ** ((self.velocity+20)/10-1) - 2
+        self.speed = 2 ** ((self.velocity + 20) / 10 - 1) - 2
         direction_radians = math.pi * self.direction / 180
         dx = math.cos(direction_radians) * self.speed * self.speed_factor
         dy = math.sin(direction_radians) * self.speed * self.speed_factor
@@ -153,7 +155,8 @@ class Player(Sprite):
         self.direction %= 360
 
     def Shoot(self):
-        pass
+        missiles.append(stage.addSprite(Player(sprites.missile2, x=self.x, y=self.y, keys=(1,) + (0,) * 4, animation_fps=3)))
+        print('SHOOT')
 
 
 # ---------------------------------------------------- Functions ----------------------------------------------------- #
@@ -162,7 +165,8 @@ def HandleEvents():
     """
 
     global player
-    for event in pygame.event.get():
+
+    for event in [pygame.event.Event(pygame.KEYDOWN, {'key': 1})] + pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             sys.exit()
@@ -170,8 +174,9 @@ def HandleEvents():
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 sys.exit()
-            elif event.key == pygame.K_SPACE:
-                stage.setFocus(player2 if stage.focus == player else player)
+            elif event.key == pygame.K_LCTRL:
+                # stage.setFocus(player2 if stage.focus == player else player)
+                stage.setFocus(player if not stage.focus else None)
             elif (event.key, True) in keyDict:
                 keyDict[(event.key, True)]()
             # elif event.key == player.keys[0]:
@@ -181,16 +186,16 @@ def HandleEvents():
             if (event.key, False) in keyDict:
                 keyDict[(event.key, False)]()
 
+
 def ConstructKeysDict():
     """Construct a dictionary that maps each tuple (key, state) to a player function
        key is the key pressed (pygame constant). state is either True or False (key down or key up)
     """
     keyDict = {}
     for _player in Player.players:
-            keyDict[(_player.keys[0], True)] = _player.Ignite
-            keyDict[(_player.keys[0], False)] = _player.Extinguish
+        keyDict[(_player.keys[0], True)] = _player.Ignite
+        keyDict[(_player.keys[0], False)] = _player.Extinguish
     return keyDict
-
 
 
 # ---------------------------------------------------- Game Loop ----------------------------------------------------- #
@@ -203,12 +208,16 @@ def gameLoop():
         HandleEvents()
         keysStates = pygame.key.get_pressed()
         stage.do()
-        
+
         # Display FPS and the focused sprite's coordinates
         fps = clock.get_fps()
         gameDisplay.blit(font.render("%.1f" % fps, True, pygame.Color('orange')), (0, 0))
         if stage.focus: gameDisplay.blit(font.render("%.2f, %.2f" % (stage.focus.x, stage.focus.y), True, pygame.Color('white')), (0, 30))
-        
+
+        # make missiles move
+        # for missile in missiles:
+        #     missile.Thrust()
+
         # Cap FPS
         clock.tick(FPS)
         current_frame = (current_frame + 1) % 30
@@ -232,10 +241,10 @@ def main():
     current_frame = 0
 
     # Initialize display:
-    os.environ['SDL_VIDEO_CENTERED'] = '1'
+    # os.environ['SDL_VIDEO_CENTERED'] = '1'
     pygame.init()
     # gameDisplay = pygame.display.set_mode((0, 0), pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF)  # Run fullscreen
-    gameDisplay = pygame.display.set_mode((0, 0), pygame.NOFRAME)  # Run borderless windowed
+    gameDisplay = pygame.display.set_mode((1440, 810))  # Run borderless windowed
     pygame.mouse.set_visible(False)
     pygame.display.set_caption('Comet')
     font = pygame.font.Font(None, 30)
@@ -243,13 +252,13 @@ def main():
     # Initialize the stage and add sprites:
     stage = Stage(2)  # 2 layers
     player = stage.addSprite(Player(sprites.spaceship1, x=500, y=500))
-    player2 = stage.addSprite(Player(sprites.spaceship1, x=500, y=500, keys=(pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT, pygame.K_SPACE)))
-    for _ in range(0): stage.addSprite(Player(sprites.spaceship1, keys=(0,)*5))
+    # player2 = stage.addSprite(Player(sprites.spaceship2, x=500, y=500, keys=(pygame.K_UP, pygame.K_LEFT, pygame.K_DOWN, pygame.K_RIGHT, pygame.K_LCTRL)))
+    for _ in range(0): stage.addSprite(Player(sprites.spaceship1, keys=(0,) * 5))
     keyDict = ConstructKeysDict()
     # stage.setFocus(player)
-    stage.setBackground([["textures\\background\\debug00.png","textures\\background\\debug10.png","textures\\background\\debug20.png"],
-                         ["textures\\background\\debug01.png","textures\\background\\debug11.png","textures\\background\\debug21.png"],
-                         ["textures\\background\\debug02.png","textures\\background\\debug12.png","textures\\background\\debug22.png"]])
+    stage.setBackground([["textures\\background\\debug00.png", "textures\\background\\debug01.png", "textures\\background\\debug20.png"],
+                         ["textures\\background\\debug10.png", "textures\\background\\debug11.png", "textures\\background\\debug21.png"],
+                         ["textures\\background\\debug02.png", "textures\\background\\debug12.png", "textures\\background\\debug22.png"]])
     # End of initialization
     print(keyDict)
     gameLoop()
